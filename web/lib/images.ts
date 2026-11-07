@@ -1,5 +1,5 @@
 // Album images live in IndexedDB (localStorage is too small for covers), keyed by a short random file name.
-const DB = "my-room", STORE = "images";
+const DB = "my-flat", STORE = "images";
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 function db() {

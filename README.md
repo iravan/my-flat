@@ -1,17 +1,21 @@
-# My Room
+# My Flat
 
-A cozy neon bedroom in the browser for showing off your vinyl collection.
+Place each piece of furniture when you move into a new flat. Walk the room and drag furniture until the layout feels right.
 
-Walk around the room, flip through crates, inspect sleeves, drop a record on the turntable, and share the space with friends. The room itself is customizable too — lighting moods, wall styles, size, and uploaded 3D models.
+Forked from [My Room](https://github.com/iravan/my-room). The scene is still that bedroom; the flat design comes next. Saves use their own keys (`my-flat` in this browser), so the two apps do not share a layout.
 
-## Features
+Live at https://iravan.github.io/my-flat/.
 
-- **3D bedroom** — bed, desk setup, turntable, crate, cabinet, clutter, city outside the window
-- **Vinyl collection** — crate flip, spine browse, sleeve inspector (flip / vinyl / gatefold), album editor with custom covers and disc styles
-- **Turntable** — place a record, lower the tonearm, 33⅓ / 45 platter spin
-- **Showcase** — photo mode, HUD-free showcase mode, export / import / visit a friend’s room (read-only)
-- **Room customisation** — lighting presets, materials, room size, replace item looks with uploaded GLB models (cores like platter and screens stay working)
-- **Local-first** — collection and images persist in the browser; Supabase schema ready for signed-in sync and public rooms
+## What you can do today
+
+The tools from My Room are already here, and the flat planner will build on them:
+
+- **Move furniture** — select, drag, rotate, resize, snap, undo
+- **Walk around** — drag to look, WASD / touch stick
+- **Room options** — lighting, materials, room size, uploaded GLB models
+- **Local-first** — the layout stays in this browser
+
+The vinyl bedroom (turntable, crate, albums) is still in this build until the new design replaces it.
 
 ## Stack
 
@@ -51,6 +55,8 @@ supabase/     Schema, storage bucket, RLS + policy tests
 
 ## Docs
 
+These notes describe the bedroom this project was forked from.
+
 | File | What it is |
 | --- | --- |
 | [`game_design_document_visual_vinyl_showcase.md`](game_design_document_visual_vinyl_showcase.md) | Original design doc |
@@ -62,4 +68,4 @@ The original Unity build is kept at git tag `unity-final` (`git checkout unity-f
 
 ## License
 
-Private repository. Texture packs under `web/public/textures/` include their own CC0 / license notes.
+Texture packs under `web/public/textures/` include their own CC0 / license notes.

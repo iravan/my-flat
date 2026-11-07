@@ -259,7 +259,7 @@ export const useLayout = create<State>()(
       undo: () => set((s) => (s.past.length ? { ...s.past[s.past.length - 1], past: s.past.slice(0, -1) } : {})),
     }),
     {
-      name: "my-room-layout", version: 1, storage, partialize: ({ hidden, style, size, items, options, models, shells }) => ({ hidden, style, size, items, options, models, shells }),
+      name: "my-flat-layout", version: 1, storage, partialize: ({ hidden, style, size, items, options, models, shells }) => ({ hidden, style, size, items, options, models, shells }),
       merge: (saved, cur) => ({ ...cur, ...normalizeRoom(saved) }),
     },
   ),

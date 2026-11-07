@@ -1,4 +1,4 @@
-# Deploy the game (web/) to GitHub Pages on every push to main: https://iravan.github.io/my-room/
+# Deploy the game (web/) to GitHub Pages on every push to main: https://iravan.github.io/my-flat/
 name: Deploy to GitHub Pages
 
 on:

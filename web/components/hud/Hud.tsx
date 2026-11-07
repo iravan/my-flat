@@ -69,7 +69,7 @@ function LeftPanel() {
       </div>
       <div className="grid gap-1">
         {visiting ? (
-          <Button size="sm" variant="outline" onClick={leaveVisit}>Leave visit (back to my room)</Button>
+          <Button size="sm" variant="outline" onClick={leaveVisit}>Leave visit (back to my flat)</Button>
         ) : (
           <>
             <Button size="sm" onClick={() => editAlbum()}>+ New album</Button>

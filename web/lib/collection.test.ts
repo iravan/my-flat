@@ -126,12 +126,12 @@ describe("sharing", () => {
     expect(f.images.map((i: { name: string }) => i.name)).toContain("abcd1234.glb");
     // a friend's copy: visiting shows their room, prefixed model files, and writes nothing to your save
     useLayout.setState({ items: {}, options: {}, models: {} });
-    const ownSave = mem.get("my-room-layout");
+    const ownSave = mem.get("my-flat-layout");
     visit(json);
     expect(useLayout.getState().models["model-0000aaaa"].asset).toBe("visit:abcd1234.glb");
     expect(useLayout.getState().items.bed.position).toEqual([0, 0, 0.5]);
     useLayout.getState().move("bed", { position: [1, 0, 1], rotationY: 0, scale: 1 }); // even a change during a visit
-    expect(mem.get("my-room-layout")).toBe(ownSave);
+    expect(mem.get("my-flat-layout")).toBe(ownSave);
     leaveVisit();
     expect(useLayout.getState().items).toEqual({});
   });

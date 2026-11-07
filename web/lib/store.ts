@@ -102,6 +102,6 @@ export const useGame = create<State>()(
       setRoomPos: (p) => set({ roomPos: p }),
     }),
     // Inspect needs a record picked, so a reload lands back where it was opened from.
-    { name: "my-room", partialize: ({ view, inspectReturn, yaw, pitch, roomPos, sensitivity, preset, lamp, quality, blanket, rpm45, volume, muted }) => ({ view: view === "inspect" ? inspectReturn : view, inspectReturn, yaw, pitch, roomPos, sensitivity, preset, lamp, quality, blanket, rpm45, volume, muted }) },
+    { name: "my-flat", partialize: ({ view, inspectReturn, yaw, pitch, roomPos, sensitivity, preset, lamp, quality, blanket, rpm45, volume, muted }) => ({ view: view === "inspect" ? inspectReturn : view, inspectReturn, yaw, pitch, roomPos, sensitivity, preset, lamp, quality, blanket, rpm45, volume, muted }) },
   ),
 );

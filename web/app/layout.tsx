@@ -30,8 +30,8 @@ const handKo = Nanum_Pen_Script({ weight: "400", preload: false, display: "swap"
 export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false };
 
 export const metadata: Metadata = {
-  title: "My Room",
-  description: "A neon bedroom for your vinyl collection.",
+  title: "My Flat",
+  description: "Place the furniture in a new flat.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

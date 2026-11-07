@@ -77,7 +77,7 @@ function defaultCollection(): CollectionFile {
   return { albums, spinningId: albums[0].id };
 }
 
-export const SAVE_KEY = "my-room-collection";
+export const SAVE_KEY = "my-flat-collection";
 
 // Read the save. A broken save is never lost: it is set aside as `<key>.bak` and the room starts fresh.
 export function loadCollection(storage: Pick<Storage, "getItem" | "setItem">): CollectionFile & { warning: string } {

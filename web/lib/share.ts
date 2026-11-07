@@ -106,7 +106,7 @@ export function leaveVisit() {
 // ---- browser glue: download, pick a file ----
 
 export async function downloadCollection() {
-  const name = "my-vinyl-room.json";
+  const name = "my-flat.json";
   const url = URL.createObjectURL(new Blob([await exportCollection()], { type: "application/json" }));
   const a = Object.assign(document.createElement("a"), { href: url, download: name });
   a.click();

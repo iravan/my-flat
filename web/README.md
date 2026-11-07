@@ -1,6 +1,6 @@
-# My Room (web)
+# My Flat (web)
 
-Next.js 16 + React Three Fiber + Zustand + Tailwind + shadcn/ui. Rebuilt from the Unity version (git tag `unity-final`; see `../MIGRATION.md`).
+Next.js 16 + React Three Fiber + Zustand + Tailwind + shadcn/ui. Forked from My Room; see `../README.md`. The Unity bedroom it started from is git tag `unity-final` (`../MIGRATION.md`).
 
 ```sh
 npm install

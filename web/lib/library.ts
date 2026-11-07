@@ -55,7 +55,7 @@ export const useLibrary = create<State>()(
       },
       remove: (id) => set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
     }),
-    { name: "my-room-library", version: 1, storage: createJSONStorage(() => ({ // read lazily: no localStorage while the server renders
+    { name: "my-flat-library", version: 1, storage: createJSONStorage(() => ({ // read lazily: no localStorage while the server renders
       getItem: (k: string) => localStorage.getItem(k), setItem: (k: string, v: string) => localStorage.setItem(k, v), removeItem: (k: string) => localStorage.removeItem(k),
     })), merge: (saved, cur) => ({ ...cur, entries: normalizeLibrary((saved as { entries?: unknown })?.entries) }) },
   ),
