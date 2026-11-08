@@ -103,6 +103,21 @@ export function PlanSketch({ plan }: { plan: FlatPlan }) {
       <g stroke="#d4d4d8" fill="none" strokeWidth={0.045}>
         <line x1={X(hinge)} y1={Y(b.z0)} x2={X(hinge)} y2={Y(b.z0 + leaf)} />
         <path d={`M ${X(hinge + leaf)} ${Y(b.z0)} A ${leaf} ${leaf} 0 0 1 ${X(hinge)} ${Y(b.z0 + leaf)}`} />
+        {plan.partitions.flatMap((p, i) => (p.gaps ?? []).map((g, j) => {
+          const h = g.at - g.width / 2;
+          if (p.axis === "x") return (
+            <g key={`${i}-${j}`}>
+              <line x1={X(h)} y1={Y(p.fixed)} x2={X(h)} y2={Y(p.fixed + g.width)} />
+              <path d={`M ${X(h + g.width)} ${Y(p.fixed)} A ${g.width} ${g.width} 0 0 1 ${X(h)} ${Y(p.fixed + g.width)}`} />
+            </g>
+          );
+          return (
+            <g key={`${i}-${j}`}>
+              <line x1={X(p.fixed)} y1={Y(h)} x2={X(p.fixed + g.width)} y2={Y(h)} />
+              <path d={`M ${X(p.fixed)} ${Y(h + g.width)} A ${g.width} ${g.width} 0 0 1 ${X(p.fixed + g.width)} ${Y(h)}`} />
+            </g>
+          );
+        }))}
       </g>
       {plan.rooms.map((r) => {
         const lines = r.name.split(" · ");

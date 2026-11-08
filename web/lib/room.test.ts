@@ -1,7 +1,7 @@
 // Layout: untrusted poses are cleaned, and moving an item pivots about its own home, never the room's origin.
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { FLOORPLANS } from "./flat-plan";
+import { DREAM, FLOORPLANS } from "./flat-plan";
 import { pieceHome } from "./frame";
 import {
   addPiece, clampPiece, clearFurniture, defaultFlat, duplicatePiece, flatFromPlan, hiddenOf, itemMatrix,
@@ -241,13 +241,12 @@ describe("flat", () => {
     const f = defaultFlat();
     expect(f.plan.name).toBe("清水樓");
     expect(f.plan.rooms.map((r) => r.id).sort()).toEqual(
-      ["bath", "entry", "kitchen", "living", "utility"].sort(),
+      ["bath", "entry", "kitchen", "living", "store"].sort(),
     );
-    expect(f.plan.partitions).toHaveLength(5);
+    expect(f.plan.partitions).toHaveLength(6);
     expect(f.plan.windows).toHaveLength(4);
-    // Real HA proportions: 6.9 m frontage, 5.2 m deep.
-    expect(f.size.w).toBeCloseTo(6.9, 1);
-    expect(f.size.d).toBeCloseTo(5.2, 1);
+    expect(f.size.w / DREAM).toBeCloseTo(6.9, 1);
+    expect(f.size.d / DREAM).toBeCloseTo(5.2, 1);
     expect(f.items["p-00000003"].position[0]).toBeCloseTo(f.plan.rooms.find((r) => r.id === "living")!.x);
   });
 

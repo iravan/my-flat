@@ -1,15 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Slab, Part } from "./Surface";
 import { Metal } from "./Lighting";
-import { views, EYE } from "./City";
+import { views, EYE, sweetDreamMap } from "./City";
 import { GROUND } from "./Landscape";
 import { useGame } from "@/lib/store";
 import { useLayout, useStyle } from "@/lib/room";
 import { buildShell, planBounds, shimizu, type FlatPlan, type PlanWindow } from "@/lib/flat-plan";
 import type { Vec3 } from "@/lib/store";
+
+const DOOR = new THREE.Color("#8a7a66");
+const STEEL = new THREE.Color("#c8ccd0");
+
+/** Current swing of each door, radians. Walking waits until the leaf is mostly clear. */
+export const doorYaw = new Map<string, number>();
 
 export function usePlan(): FlatPlan {
   return useLayout((s) => s.plan) ?? shimizu();
@@ -58,17 +65,64 @@ export function RoomShell() {
           grainOnly={st.paintedWalls}
         />
       ))}
-      {/* The front door leaf, closed in its hole on the corridor side. */}
-      <Part
-        size={[plan.entrance.width - 0.02, plan.entrance.height - 0.02, 0.045] as Vec3}
-        position={[plan.entrance.x, (plan.entrance.height - 0.02) / 2, b.z0 + 0.075]}
-        color={new THREE.Color("#8a7a66")}
-        gloss={0.15}
-      />
+      {/* A closed leaf in every doorway: the front door, and each partition gap. */}
+      <DoorLeaf id="entrance" axis="x" at={plan.entrance.x} fixed={b.z0} width={plan.entrance.width} height={plan.entrance.height} />
+      {plan.partitions.flatMap((p, i) => (p.gaps ?? []).map((g, j) => (
+        <DoorLeaf key={`d-${i}-${j}`} id={`${i}:${j}`} axis={p.axis} at={g.at} fixed={p.fixed} width={g.width} height={plan.entrance.height} />
+      )))}
       {plan.windows.map((w, i) => (
         <WindowGlass key={`win-${i}`} win={w} bounds={b} />
       ))}
     </>
+  );
+}
+
+// Closed door blocks the opening. Open swings the leaf aside over a short turn. Click or E.
+function DoorLeaf({ id, axis, at, fixed, width, height }: {
+  id: string; axis: "x" | "z"; at: number; fixed: number; width: number; height: number;
+}) {
+  const open = useGame((s) => !!s.openDoors[id]);
+  const leafRef = useRef<THREE.Group>(null);
+  const yaw = useRef(0);
+  const y = (height - 0.02) / 2;
+  const along = axis === "x";
+  const hinge: Vec3 = along ? [at - width / 2, 0, fixed] : [fixed, 0, at - width / 2];
+  const leaf: Vec3 = along ? [width - 0.08, height - 0.02, 0.04] : [0.04, height - 0.02, width - 0.08];
+  const leafAt: Vec3 = along ? [width / 2, y, 0] : [0, y, width / 2];
+  const handle: Vec3 = along ? [width * 0.82, 1.02, 0.04] : [0.04, 1.02, width * 0.82];
+  const lever: Vec3 = along ? [0.11, 0.018, 0.025] : [0.025, 0.018, 0.11];
+  const jamb = (sign: number): Vec3 => along
+    ? [at + sign * (width / 2), height / 2, fixed]
+    : [fixed, height / 2, at + sign * (width / 2)];
+  const jambSize: Vec3 = along ? [0.04, height, 0.12] : [0.12, height, 0.04];
+  const head: Vec3 = along ? [at, height, fixed] : [fixed, height, at];
+  const headSize: Vec3 = along ? [width + 0.04, 0.05, 0.12] : [0.12, 0.05, width + 0.04];
+  useFrame((_, dt) => {
+    const g = leafRef.current;
+    if (!g) return;
+    const on = !!useGame.getState().openDoors[id];
+    const goal = on ? (along ? -Math.PI / 2 : Math.PI / 2) : 0;
+    yaw.current += (goal - yaw.current) * (1 - Math.exp(-8 * Math.min(dt, 0.05)));
+    g.rotation.y = yaw.current;
+    doorYaw.set(id, yaw.current);
+  });
+  const toggle = (e: { delta: number; stopPropagation: () => void }) => {
+    if (e.delta > 4 || useGame.getState().choosing) return;
+    e.stopPropagation();
+    useGame.getState().toggleDoor(id);
+  };
+  return (
+    <group>
+      <Part size={jambSize} position={jamb(-1)} color={DOOR} gloss={0.1} />
+      <Part size={jambSize} position={jamb(1)} color={DOOR} gloss={0.1} />
+      <Part size={headSize} position={head} color={DOOR} gloss={0.1} />
+      <group ref={leafRef} position={hinge} onClick={toggle}
+        onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = "pointer"; useGame.setState({ hint: open ? "Close" : "Open" }); }}
+        onPointerOut={() => { document.body.style.cursor = ""; useGame.setState({ hint: "" }); }}>
+        <Part size={leaf} position={leafAt} color={DOOR} gloss={0.15} />
+        <Part size={lever} position={handle} color={STEEL} gloss={0.7} />
+      </group>
+    </group>
   );
 }
 
@@ -109,6 +163,7 @@ export function WindowScenery() {
   const tint = style.presets[preset % 3].window;
   const kind = style.outside, pines = style.name === "Scandinavian";
   const { skyMap, layers, ground } = useMemo(() => views(kind, pines), [kind, pines]);
+  const dream = useMemo(() => sweetDreamMap(), []);
   if (!plan.windows.some((w) => w.wall === "s")) return null;
   return (
     <group position={[0, 0, b.z1]} rotation={[0, Math.PI, 0]}>
@@ -128,6 +183,10 @@ export function WindowScenery() {
           <meshBasicMaterial map={map} color={tint} transparent alphaTest={0.02} depthWrite={false} />
         </mesh>
       ))}
+      <mesh position={[8, 9, -42]}>
+        <planeGeometry args={[24, 6]} />
+        <meshBasicMaterial map={dream} transparent depthWrite={false} toneMapped={false} />
+      </mesh>
     </group>
   );
 }

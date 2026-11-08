@@ -48,6 +48,9 @@ export const SQFT = 0.092903;
 const WALL_T = 0.1;
 const DOOR_H = 2.05;
 
+/** Shown size is the drawn plan, 1.5× wider and deeper. Ceiling, door height, and door width stay as drawn. */
+export const DREAM = 1.5;
+
 export function planArea(plan: FlatPlan): number {
   return plan.rooms.reduce((s, r) => s + r.w * r.d, 0);
 }
@@ -56,26 +59,26 @@ export function planArea(plan: FlatPlan): number {
  * 清水樓 — a bare shell unit as handed over by the Hong Kong Housing Authority
  * (構件式單位, 4–5 person: internal floor area 35.0–36.1 m² ≈ 377–388 sq ft).
  *
- * Wide frontage, not a slot: 6.9 m across the window wall × 5.2 m deep, clear ceiling
- * 2.55 m. The service strip sits by the entrance. Only the kitchen and the bath are
- * walled. The washer is a 1.0 m niche, open to the living room, not a second room.
- * The window wall has two openings, so a later bedroom wall between them still gets light.
+ * Wide frontage: 6.9 m across the window wall × 5.2 m deep, clear ceiling 2.55 m.
+ * Service strip is 2.0 m deep, so the living room is 3.2 m deep. Kitchen, bath, and
+ * the store cupboard are walled. The entry is open. Two south windows leave a pier
+ * for a later bedroom wall.
  *
  *   north (−z), corridor, front door
- *   ┌──────────┬───────┬──────────┬───┐
- *   │ Kitchen  │ Entry │   Bath   │ W │  W = 1.0 m washer niche, open below
- *   │  door↓   │(open) │  door↓   │   │
- *   ├──────────┴───────┴──────────┴───┤
- *   │     Living          Bedroom bay │  one room until you build the wall
- *   └════ window ═══════ window ══════┘
+ *   ┌────────────┬─────────┬────────┬────┐
+ *   │  Kitchen   │  Entry  │  Bath  │ St │  2.0
+ *   │  door at   │  open   │  door  │door│
+ *   │  entry end │         │        │    │
+ *   ├────────────┴─────────┴────────┴────┤
+ *   │ Living · dining                    │  3.2
+ *   └════ window ═════ pier ════ window ═┘
  *   south (+z), view
  */
 export function shimizu(): FlatPlan {
-  const W = 6.9, D = 5.2, wet = 2.2;
-  const kX1 = 2.4;          // kitchen: 600 counter + aisle
-  const eX1 = 3.7;          // entry: door swing plus a shoe cabinet
-  const bX1 = 5.9;          // bath: shower, basin, toilet
-  // washer niche takes the last 1.0 m
+  const W = 6.9, D = 5.2, wet = 2.0;
+  const kX1 = 2.6;
+  const eX1 = 4.3;          // entry 1.7: door swing plus a shoe cabinet
+  const bX1 = 6.1;          // bath 1.8
 
   const raw: FlatPlan = {
     id: "shimizu",
@@ -85,70 +88,70 @@ export function shimizu(): FlatPlan {
       room("kitchen", "Kitchen", 0, kX1, 0, wet),
       room("entry", "Entry", kX1, eX1, 0, wet),
       room("bath", "Bath", eX1, bX1, 0, wet),
-      room("utility", "Washer", bX1, W, 0, wet),
+      room("store", "Store", bX1, W, 0, wet),
       room("living", "Living · Dining", 0, W, wet, D),
     ],
     partitions: [
-      // Kitchen: its own box, door on the living side.
       { axis: "z", fixed: kX1, from: 0, to: wet },
-      { axis: "x", fixed: wet, from: 0, to: kX1, gaps: [{ at: kX1 / 2, width: 0.75 }] },
-      // Bath: its own box, door on the living side.
+      // Door toward the entry, so the north counter stays in one run.
+      { axis: "x", fixed: wet, from: 0, to: kX1, gaps: [{ at: kX1 - 0.5, width: 0.75 }] },
       { axis: "z", fixed: eX1, from: 0, to: wet },
       { axis: "x", fixed: wet, from: eX1, to: bX1, gaps: [{ at: (eX1 + bX1) / 2, width: 0.7 }] },
-      // Washer niche: one wall against the bath, open to the living room.
       { axis: "z", fixed: bX1, from: 0, to: wet },
+      { axis: "x", fixed: wet, from: bX1, to: W, gaps: [{ at: (bX1 + W) / 2, width: 0.7 }] },
     ],
     windows: [
-      // Two openings on the view wall, with a stretch of solid wall between them
-      // so a bedroom partition can land there and both rooms still have a window.
-      { wall: "s", at: 1.35, width: 1.5, sill: 0.9, height: 1.35 },
-      { wall: "s", at: 5.15, width: 1.4, sill: 0.9, height: 1.35 },
-      // Kitchen and bath windows onto the corridor / air well.
-      { wall: "n", at: kX1 / 2, width: 0.6, sill: 1.1, height: 0.6 },
+      // Pier between them lands a future bedroom wall near x = 4.3.
+      { wall: "s", at: 1.5, width: 1.6, sill: 0.9, height: 1.35 },
+      { wall: "s", at: 5.6, width: 1.4, sill: 0.9, height: 1.35 },
+      { wall: "n", at: kX1 / 2, width: 0.9, sill: 1.1, height: 0.6 },
       { wall: "n", at: (eX1 + bX1) / 2, width: 0.5, sill: 1.3, height: 0.5 },
     ],
-    // Front door: 800 mm clear (HA widened it from 750 mm), centred on the entry run.
     entrance: { x: (kX1 + eX1) / 2, width: 0.8, height: DOOR_H },
   };
   return place(raw);
 }
 
 /**
- * 清水樓, 1–2 person. About 14.6 m² (≈157 sq ft): a walled bath, an open kitchen,
- * and one room for living and sleeping. The front door opens into the kitchen.
+ * 清水樓, one person. 3.0 × 4.9 m (14.7 m²). Door and shoes at the short end.
+ * The bath opens into the entry. A single bed fits along the west wall of the
+ * 2.1 m-deep room. Kitchen window is on the west wall, over the counter.
  */
 export function studio(): FlatPlan {
-  const W = 3.4, D = 4.3, wet = 1.8, kX1 = 1.8;
+  const W = 3.0, D = 4.9, entryD = 1.1, wet = 2.8, kX1 = 1.6;
   return place({
     id: "studio",
     name: "清水樓 · 一人",
     h: 2.55,
     rooms: [
-      room("kitchen", "Kitchen", 0, kX1, 0, wet),
-      room("bath", "Bath", kX1, W, 0, wet),
+      room("entry", "Entry", 0, W, 0, entryD),
+      room("kitchen", "Kitchen", 0, kX1, entryD, wet),
+      room("bath", "Bath", kX1, W, entryD, wet),
       room("living", "Living", 0, W, wet, D),
     ],
     partitions: [
-      { axis: "z", fixed: kX1, from: 0, to: wet },
-      { axis: "x", fixed: wet, from: kX1, to: W, gaps: [{ at: (kX1 + W) / 2, width: 0.7 }] },
+      { axis: "z", fixed: kX1, from: entryD, to: wet },
+      { axis: "x", fixed: entryD, from: kX1, to: W, gaps: [{ at: (kX1 + W) / 2, width: 0.7 }] },
+      { axis: "x", fixed: wet, from: kX1, to: W },
     ],
     windows: [
       { wall: "s", at: W / 2, width: 1.4, sill: 0.9, height: 1.35 },
-      { wall: "n", at: (kX1 + W) / 2, width: 0.45, sill: 1.35, height: 0.45 },
+      { wall: "w", at: (entryD + wet) / 2, width: 0.9, sill: 1.0, height: 1.0 },
+      { wall: "e", at: (entryD + wet) / 2, width: 0.4, sill: 1.4, height: 0.4 },
     ],
-    entrance: { x: kX1 / 2, width: 0.8, height: DOOR_H },
+    entrance: { x: W / 2, width: 0.8, height: DOOR_H },
   });
 }
 
 /**
- * A Japanese 1LDK, about 40 m². Service rooms line the corridor side. The kitchen
- * is open to the living room; the bedroom has a door. Toilet, washroom, and bath
- * are separate, which is the usual arrangement.
+ * A Japanese 1LDK, 8.0 × 5.1 m (40.8 m²), ceiling 2.4 m. The bedroom is 3.0 m
+ * wide. The genkan steps up into the kitchen's north end, which is open east
+ * into the living room. The bath is reached only through the washroom.
  */
 export function japanese1Ldk(): FlatPlan {
-  const W = 7.4, wet = 1.8, D = 5.4;
-  const gX1 = 1.6, tX1 = 2.6, wX1 = 4.2, bX1 = 5.8;
-  const kX1 = 2.2, lX1 = 5.2;
+  const W = 8.0, wet = 1.7, D = 5.1;
+  const gX1 = 1.8, tX1 = 2.9, wX1 = 4.5, bX1 = 6.1;
+  const kX1 = 2.2, lX1 = 5.0;
   return place({
     id: "ldk",
     name: "1LDK",
@@ -172,7 +175,8 @@ export function japanese1Ldk(): FlatPlan {
       { axis: "z", fixed: bX1, from: 0, to: wet },
       { axis: "x", fixed: wet, from: wX1, to: bX1 },
       { axis: "x", fixed: wet, from: bX1, to: W, gaps: [{ at: (bX1 + W) / 2, width: 0.7 }] },
-      { axis: "z", fixed: lX1, from: wet, to: D, gaps: [{ at: (wet + D) / 2, width: 0.75 }] },
+      // Bedroom door in the southern half of the wall, clear of the bed.
+      { axis: "z", fixed: lX1, from: wet, to: D, gaps: [{ at: 4.2, width: 0.75 }] },
     ],
     windows: [
       { wall: "s", at: (kX1 + lX1) / 2, width: 1.8, sill: 0.85, height: 1.3 },
@@ -184,8 +188,23 @@ export function japanese1Ldk(): FlatPlan {
   });
 }
 
-/** Shift a plan drawn from (0, 0) so it is centred on the origin. */
+/** Scale width and depth, then centre a plan drawn from (0, 0) on the origin. */
 function place(raw: FlatPlan): FlatPlan {
+  const s = (n: number) => n * DREAM;
+  raw = {
+    ...raw,
+    rooms: raw.rooms.map((r) => ({ ...r, x: s(r.x), z: s(r.z), w: s(r.w), d: s(r.d) })),
+    windows: raw.windows.map((w) => ({ ...w, at: s(w.at), width: s(w.width) })),
+    // Door openings stay a real leaf width. Only their position moves with the plan.
+    entrance: { ...raw.entrance, x: s(raw.entrance.x) },
+    partitions: raw.partitions.map((p) => ({
+      ...p,
+      fixed: s(p.fixed),
+      from: s(p.from),
+      to: s(p.to),
+      gaps: p.gaps?.map((g) => ({ ...g, at: s(g.at) })),
+    })),
+  };
   const b = planBounds(raw);
   const cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
   return {
@@ -212,29 +231,34 @@ export type FloorplanChoice = {
   build: () => FlatPlan;
 };
 
+function span(plan: FlatPlan) {
+  const b = planBounds(plan);
+  return `${b.w.toFixed(1)} × ${b.d.toFixed(1)} m`;
+}
+
 /** The plans offered on the start screen. */
 export const FLOORPLANS: FloorplanChoice[] = [
   {
     id: "shimizu",
     title: "清水樓 · 四人",
-    blurb: "Bare shell, 6.9 × 5.2 m. Kitchen and bath walled, a washer niche, two windows on the view wall.",
-    area: "36 m²",
+    blurb: `Bare shell, ${span(shimizu())}. Kitchen, bath, and store walled. Two windows on the view wall.`,
+    area: `${Math.round(planArea(shimizu()))} m²`,
     style: "shimizu",
     build: shimizu,
   },
   {
     id: "studio",
     title: "清水樓 · 一人",
-    blurb: "Small bare shell, 3.4 × 4.3 m. Bath walled, kitchen open onto the room, one window.",
-    area: "15 m²",
+    blurb: `Slot, ${span(studio())}. Entry at the door, bath off the entry, bed along the side wall.`,
+    area: `${Math.round(planArea(studio()))} m²`,
     style: "shimizu",
     build: studio,
   },
   {
     id: "ldk",
     title: "日本 1LDK",
-    blurb: "About 40 m². Genkan, kitchen open to living, bedroom, toilet, washroom, bath, and closet.",
-    area: "40 m²",
+    blurb: `Genkan, kitchen open to living, bedroom, toilet, washroom, bath, and closet. ${span(japanese1Ldk())}.`,
+    area: `${Math.round(planArea(japanese1Ldk()))} m²`,
     style: "japandi",
     build: japanese1Ldk,
   },
@@ -242,6 +266,35 @@ export const FLOORPLANS: FloorplanChoice[] = [
 
 export function floorplanById(id: string): FloorplanChoice | undefined {
   return FLOORPLANS.find((p) => p.id === id);
+}
+
+export type DoorSpot = { id: string; x: number; z: number; axis: "x" | "z"; width: number; height: number };
+
+/** Front door plus every partition gap. Ids match clampWalk: "entrance", then "partitionIndex:gapIndex". */
+export function doorsOf(plan: FlatPlan): DoorSpot[] {
+  const b = planBounds(plan);
+  const out: DoorSpot[] = [{
+    id: "entrance", x: plan.entrance.x, z: b.z0, axis: "x",
+    width: plan.entrance.width, height: plan.entrance.height,
+  }];
+  plan.partitions.forEach((p, i) => (p.gaps ?? []).forEach((g, j) => out.push({
+    id: `${i}:${j}`,
+    x: p.axis === "x" ? g.at : p.fixed,
+    z: p.axis === "x" ? p.fixed : g.at,
+    axis: p.axis,
+    width: g.width,
+    height: plan.entrance.height,
+  })));
+  return out;
+}
+
+export function nearestDoor(plan: FlatPlan, x: number, z: number, reach = 1.4): DoorSpot | undefined {
+  let best: DoorSpot | undefined, dist = reach;
+  for (const door of doorsOf(plan)) {
+    const d = Math.hypot(door.x - x, door.z - z);
+    if (d < dist) { best = door; dist = d; }
+  }
+  return best;
 }
 
 /** Eye height in the living room, facing the window wall. */
@@ -346,27 +399,25 @@ function subtractGaps(a0: number, a1: number, gaps: [number, number][]): [number
 }
 
 /**
- * Nearest position the camera may occupy: inside the unit, and not inside a partition
- * unless standing in its doorway. Free movement between open zones is expected — only
- * the kitchen and bath walls, and the exterior, stop you.
+ * Nearest position the camera may occupy. A doorway blocks until its id is open.
+ * The entry and other unwalled zones stay free.
  */
-export function clampWalk(plan: FlatPlan, x: number, z: number, margin = 0.22): [number, number] {
+export function clampWalk(plan: FlatPlan, x: number, z: number, margin = 0.22, open?: Readonly<Record<string, boolean>>): [number, number] {
   const b = planBounds(plan);
   let px = Math.min(b.x1 - margin, Math.max(b.x0 + margin, x));
   let pz = Math.min(b.z1 - margin, Math.max(b.z0 + margin, z));
 
   const half = WALL_T / 2 + margin;
-  for (const p of plan.partitions) {
+  plan.partitions.forEach((p, i) => {
     const across = p.axis === "x" ? pz - p.fixed : px - p.fixed;
     const along = p.axis === "x" ? px : pz;
-    if (Math.abs(across) >= half) continue;
-    if (along < p.from - half || along > p.to + half) continue;
-    const inGap = (p.gaps ?? []).some((g) => Math.abs(along - g.at) <= g.width / 2 - margin * 0.5);
-    if (inGap) continue;
-    // Push out to the side we're already on (steps are ~2 cm, so this never jumps a wall).
+    if (Math.abs(across) >= half) return;
+    if (along < p.from - half || along > p.to + half) return;
+    const inGap = (p.gaps ?? []).some((g, j) => open?.[`${i}:${j}`] && Math.abs(along - g.at) <= g.width / 2 - margin * 0.5);
+    if (inGap) return;
     const side = across >= 0 ? 1 : -1;
     if (p.axis === "x") pz = p.fixed + side * half;
     else px = p.fixed + side * half;
-  }
+  });
   return [px, pz];
 }

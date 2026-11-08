@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildShell, clampWalk, FLOORPLANS, planArea, planBounds as planBoundsOf, pointInRoom, roomAt, roomBounds, shimizu, SQFT,
+  buildShell, clampWalk, doorsOf, DREAM, FLOORPLANS, planArea, planBounds as planBoundsOf, pointInRoom, roomAt, roomBounds, shimizu, SQFT,
 } from "./flat-plan";
 
 describe("shimizu (清水樓)", () => {
@@ -9,15 +9,15 @@ describe("shimizu (清水樓)", () => {
   it("is an open-plan shell: only kitchen and bath are walled off", () => {
     expect(plan.name).toBe("清水樓");
     expect(plan.rooms.map((r) => r.id).sort()).toEqual(
-      ["bath", "entry", "kitchen", "living", "utility"].sort(),
+      ["bath", "entry", "kitchen", "living", "store"].sort(),
     );
     expect(plan.h).toBe(2.55);
-    // Five interior wall runs: two boxes for the wet rooms, one for the utility side.
-    expect(plan.partitions).toHaveLength(5);
+    expect(plan.partitions).toHaveLength(6);
   });
 
-  it("matches a HA 4–5 person modular flat: 35–36.1 m² internal, 377–388 sq ft", () => {
-    const area = planArea(plan);
+  it("is a real HA 4–5 person shell, drawn 1.5× across", () => {
+    expect(DREAM).toBe(1.5);
+    const area = planArea(plan) / (DREAM * DREAM);
     expect(area).toBeGreaterThanOrEqual(35.0);
     expect(area).toBeLessThanOrEqual(36.1);
     expect(area / SQFT).toBeGreaterThan(370);
@@ -26,17 +26,15 @@ describe("shimizu (清水樓)", () => {
 
   it("is wide-frontage, not a slot: one open room spans the window wall", () => {
     const living = plan.rooms.find((r) => r.id === "living")!;
-    const utility = plan.rooms.find((r) => r.id === "utility")!;
+    const store = plan.rooms.find((r) => r.id === "store")!;
     const b = planBoundsOf(plan);
-    // ~6.9 m across the front, ~5.2 m deep.
-    expect(b.x1 - b.x0).toBeCloseTo(6.9, 1);
-    expect(b.z1 - b.z0).toBeCloseTo(5.2, 1);
-    expect(living.w).toBeCloseTo(6.9, 1);
-    expect(living.d).toBeCloseTo(3.0, 1);
-    // The living room is most of the unit; the washer niche is a slot, not a second room.
+    expect((b.x1 - b.x0) / DREAM).toBeCloseTo(6.9, 1);
+    expect((b.z1 - b.z0) / DREAM).toBeCloseTo(5.2, 1);
+    expect(living.w / DREAM).toBeCloseTo(6.9, 1);
+    expect(living.d / DREAM).toBeCloseTo(3.2, 1);
     expect((living.w * living.d) / planArea(plan)).toBeGreaterThan(0.55);
-    expect(utility.w).toBeLessThanOrEqual(1.05);
-    expect(utility.w * utility.d).toBeLessThan(2.5);
+    expect(store.w / DREAM).toBeCloseTo(0.8, 1);
+    expect((store.w * store.d) / (DREAM * DREAM)).toBeLessThan(2);
   });
 
   it("wet rooms are usable: the kitchen fits a counter and its own door", () => {
@@ -47,15 +45,17 @@ describe("shimizu (清水樓)", () => {
     expect(kitchen.w).toBeGreaterThan(1.7);
     expect(kitchen.w * kitchen.d).toBeGreaterThan(3.5);
     // Shower + basin + toilet, not a second living room.
-    expect(bath.w * bath.d).toBeGreaterThan(3);
-    expect(bath.w * bath.d).toBeLessThan(5.2);
-    // Entry wide enough to stand in with the door open.
-    expect(entry.w).toBeGreaterThan(0.9);
+    expect((bath.w * bath.d) / (DREAM * DREAM)).toBeGreaterThan(3);
+    expect((bath.w * bath.d) / (DREAM * DREAM)).toBeLessThan(5.2);
+    // Entry wide enough for the door leaf and a shoe cabinet beside it.
+    expect(entry.w).toBeGreaterThan(1.5);
     // The kitchen door fits within the kitchen's own wall.
     const kPart = plan.partitions.find((p) => p.gaps?.length && p.axis === "x" && p.from < kitchen.x)!;
     const kDoor = kPart.gaps![0];
     expect(kDoor.at - kDoor.width / 2).toBeGreaterThanOrEqual(roomBounds(kitchen).x0 - 1e-9);
     expect(kDoor.at + kDoor.width / 2).toBeLessThanOrEqual(roomBounds(kitchen).x1 + 1e-9);
+    // Door sits toward the entry, not in the middle of the counter.
+    expect(kDoor.at).toBeGreaterThan(kitchen.x);
   });
 
   it("has windows: two on the living wall, service ones at the front", () => {
@@ -81,15 +81,13 @@ describe("shimizu (清水樓)", () => {
     expect(plan.entrance.height).toBeLessThan(plan.h);
   });
 
-  it("entry and utility are open to the living space: no wall crosses them", () => {
+  it("the entry is open to the living room; the store has a door", () => {
     const entry = roomBounds(plan.rooms.find((r) => r.id === "entry")!);
-    const utility = roomBounds(plan.rooms.find((r) => r.id === "utility")!);
+    const store = roomBounds(plan.rooms.find((r) => r.id === "store")!);
     const strip = plan.partitions.filter((p) => p.axis === "x");
-    for (const p of strip) {
-      const within = (b: { x0: number; x1: number }) => Math.min(p.to, b.x1) - Math.max(p.from, b.x0) > 1e-6;
-      expect(within(entry), "wall across the entry").toBe(false);
-      expect(within(utility), "wall across the utility alcove").toBe(false);
-    }
+    const crosses = (b: { x0: number; x1: number }) => strip.some((p) => Math.min(p.to, b.x1) - Math.max(p.from, b.x0) > 1e-6);
+    expect(crosses(entry)).toBe(false);
+    expect(crosses(store)).toBe(true);
   });
 
   it("rooms do not overlap in floor area", () => {
@@ -127,16 +125,22 @@ describe("shimizu (清水樓)", () => {
     const [x, z] = clampWalk(plan, living.x, living.z);
     expect(roomAt(plan, x, z)?.id).toBe("living");
 
-    // From the living room, the entry run and the utility alcove are both reachable.
+    // From the living room, the entry is open and the store door lets you in.
     const entry = plan.rooms.find((r) => r.id === "entry")!;
     let px = entry.x, pz = roomBounds(entry).z1 + 0.2;
     for (let i = 0; i < 150; i++) [px, pz] = clampWalk(plan, px, pz - 0.02);
     expect(roomAt(plan, px, pz)?.id).toBe("entry");
 
-    const utility = plan.rooms.find((r) => r.id === "utility")!;
-    let ux = utility.x, uz = roomBounds(utility).z1 + 0.2;
+    const store = plan.rooms.find((r) => r.id === "store")!;
+    const storeDoor = doorsOf(plan).find((d) => Math.abs(d.x - store.x) < 0.3 && d.id !== "entrance")!;
+    let ux = store.x, uz = roomBounds(store).z1 + 0.2;
     for (let i = 0; i < 150; i++) [ux, uz] = clampWalk(plan, ux, uz - 0.02);
-    expect(roomAt(plan, ux, uz)?.id).toBe("utility");
+    expect(roomAt(plan, ux, uz)?.id).not.toBe("store");
+
+    ux = store.x; uz = roomBounds(store).z1 + 0.2;
+    const open = { [storeDoor.id]: true };
+    for (let i = 0; i < 150; i++) [ux, uz] = clampWalk(plan, ux, uz - 0.02, 0.22, open);
+    expect(roomAt(plan, ux, uz)?.id).toBe("store");
 
     // A far-away point is pulled back inside the unit.
     const [bx, bz] = clampWalk(plan, 50, 50);
@@ -171,12 +175,19 @@ describe("floor plan catalogue", () => {
       for (const w of plan.windows) expect(w.sill + w.height).toBeLessThan(plan.h - 0.05);
       expect(plan.entrance.x).toBeGreaterThan(b.x0);
       expect(plan.entrance.x).toBeLessThan(b.x1);
+      expect(plan.entrance.width).toBeCloseTo(0.8, 2);
+      for (const p of plan.partitions) for (const g of p.gaps ?? []) {
+        expect(g.width).toBeGreaterThan(0.6);
+        expect(g.width).toBeLessThan(0.9);
+      }
       const shell = buildShell(plan);
       expect(shell.floors.length).toBe(plan.rooms.length);
       expect(shell.walls.length).toBeGreaterThan(8);
       const living = plan.rooms.find((r) => r.id === "living")!;
       const [x, z] = clampWalk(plan, living.x, living.z);
       expect(pointInRoom(x, z, living)).toBe(true);
+      if (plan.id === "ldk") expect(plan.rooms.find((r) => r.id === "bedroom")!.w).toBeGreaterThanOrEqual(3);
+      if (plan.id === "studio") expect(plan.rooms.find((r) => r.id === "living")!.d).toBeGreaterThan(2);
     }
   });
 });

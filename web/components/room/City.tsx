@@ -142,6 +142,25 @@ export function views(kind: "city" | "country" | "sea", pines: boolean) {
   return viewCache.get(key)!;
 }
 
+/** A rooftop sign outside the windows: the words “Sweet Dream” over the city. */
+export function sweetDreamMap() {
+  const c = document.createElement("canvas");
+  c.width = 1024;
+  c.height = 256;
+  const g = c.getContext("2d")!;
+  g.clearRect(0, 0, c.width, c.height);
+  g.font = "700 118px ui-sans-serif, system-ui, sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.shadowColor = "rgb(255, 160, 210)";
+  g.shadowBlur = 40;
+  g.fillStyle = "rgb(255, 236, 248)";
+  g.fillText("SWEET DREAM", c.width / 2, c.height / 2);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export function Outside() {
   const noWindow = useLayout((s) => s.hidden.includes("window"));
   const preset = useGame((s) => s.preset), shift = useLayout((s) => 2 - s.size.d / 2); // the city stays behind the back wall as the room's depth changes

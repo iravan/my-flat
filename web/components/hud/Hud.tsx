@@ -11,7 +11,7 @@ import { takePhoto } from "@/lib/photo";
 import { Panel } from "./Panel";
 import { PlanSketch } from "./PlanSketch";
 import { useLayout } from "@/lib/room";
-import { clampWalk, FLOORPLANS, roomAt } from "@/lib/flat-plan";
+import { clampWalk, FLOORPLANS, nearestDoor, roomAt } from "@/lib/flat-plan";
 
 const one = (v: number | readonly number[]) => (Array.isArray(v) ? v[0] : v) as number;
 
@@ -56,6 +56,7 @@ const CONTROLS: [string, string][] = [
   ["Walk", "WASD or arrows · touch stick on phones"],
   ["Look", "Drag empty space"],
   ["Place", "Add from the right panel · drag a piece · R rotate · +/− scale · Del remove · ⌘Z undo"],
+  ["Doors", "Walk up to a door, then E or click it. A closed door blocks the way."],
   ["Other", "L lighting · M mute · P photo · H hide UI · ? this help"],
 ];
 
@@ -157,6 +158,21 @@ export function PlanPicker() {
   );
 }
 
+function DoorPrompt() {
+  const pos = useGame((s) => s.roomPos);
+  const openDoors = useGame((s) => s.openDoors);
+  const choosing = useGame((s) => s.choosing);
+  const plan = useLayout((s) => s.plan);
+  if (choosing || !plan) return null;
+  const door = nearestDoor(plan, pos[0], pos[2]);
+  if (!door) return null;
+  return (
+    <p className="pointer-events-none fixed bottom-8 left-1/2 z-30 -translate-x-1/2 rounded border border-cyan-400/40 bg-black/75 px-3 py-1 text-sm text-cyan-100">
+      E {openDoors[door.id] ? "Close" : "Open"}
+    </p>
+  );
+}
+
 export function Hud() {
   useHudKeys();
   useEffect(() => {
@@ -173,6 +189,7 @@ export function Hud() {
     <>
       <TurnSideways />
       <PlanPicker />
+      <DoorPrompt />
       <Dialogs />
       {!hideUI && !choosing && <LeftPanel />}
       {hideUI && !choosing && (

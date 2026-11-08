@@ -762,6 +762,7 @@ export const useLayout = create<State>()(
         const plan = choice.build();
         get().snapshot();
         set({ ...flatFromPlan(plan, choice.style), selected: null });
+        useGame.setState({ openDoors: {} });
       },
       applyPlanAction: (id) => {
         const choice = floorplanById(id);
@@ -769,12 +770,12 @@ export const useLayout = create<State>()(
         const plan = choice.build();
         const spawn = livingSpawn(plan);
         set({ ...flatFromPlan(plan, choice.style), selected: null, past: [] });
-        useGame.setState({ ...spawn, pitch: 8, choosing: false, view: "room" });
+        useGame.setState({ ...spawn, openDoors: {}, pitch: 8, choosing: false, view: "room" });
       },
     }),
     {
       name: "my-flat-layout",
-      version: 8,
+      version: 12,
       storage,
       partialize: (s) => persistFlat(s),
       merge: (saved, cur) => ({ ...cur, ...normalizeFlat(saved) }),
@@ -789,9 +790,8 @@ export const useLayout = create<State>()(
           } catch { /* ignore */ }
           return defaultFlat();
         }
-        // v2 empty box; v3/v4 Japanese plans; v5–v7 earlier shells;
-        // v8 shrinks the washer niche and splits the window wall.
-        if (version < 8) return defaultFlat();
+        // v11 stretched the whole plan, doors included; v12 keeps door leaves at real width.
+        if (version < 12) return defaultFlat();
         return persisted as Flat;
       },
     },

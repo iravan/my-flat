@@ -53,6 +53,8 @@ type State = {
   back: () => void;
   look: (dYaw: number, dPitch: number) => void;
   setRoomPos: (p: Vec3) => void;
+  openDoors: Record<string, boolean>;
+  toggleDoor: (id: string) => void;
 };
 
 export const useGame = create<State>()(
@@ -62,7 +64,7 @@ export const useGame = create<State>()(
       inspectReturn: "room",
       yaw: -42, // desk and PC just in frame on the left
       pitch: 10,
-      roomPos: [0, 1.5, 1.1], // living centre of shimizu() (centred plan)
+      roomPos: [0, 1.5, 1.5], // living centre of the 1.5× shimizu() plan
       sensitivity: 1,
       volume: 0.8,
       muted: false,
@@ -102,6 +104,11 @@ export const useGame = create<State>()(
       },
       look: (dYaw, dPitch) => set((s) => ({ yaw: s.yaw + dYaw, pitch: Math.min(60, Math.max(-60, s.pitch + dPitch)) })),
       setRoomPos: (p) => set({ roomPos: p }),
+      openDoors: {},
+      toggleDoor: (id) => {
+        sfx("slide", 0.35);
+        set((s) => ({ openDoors: { ...s.openDoors, [id]: !s.openDoors[id] } }));
+      },
     }),
     // Inspect needs a record picked, so a reload lands back where it was opened from.
     { name: "my-flat", partialize: ({ view, inspectReturn, yaw, pitch, roomPos, sensitivity, preset, lamp, quality, blanket, rpm45, volume, muted }) => ({ view: view === "inspect" ? inspectReturn : view, inspectReturn, yaw, pitch, roomPos, sensitivity, preset, lamp, quality, blanket, rpm45, volume, muted }) },
