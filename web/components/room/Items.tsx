@@ -1,40 +1,45 @@
 "use client";
 
-import { useMemo, type ComponentType } from "react";
-import { ITEMS } from "@/items/registry";
-import { ItemView } from "@/items/_shared/ItemView";
-import type { U3 } from "@/items/_shared/prims";
-import { BedItem, onBed } from "@/items/bed";
-import { NightstandItem } from "@/items/nightstand";
-import { LampItem } from "@/items/lamp";
-import { ChairItem } from "@/items/chair";
-import { HOODIE, PILE } from "@/items/hoodie/roll";
-import { JEANS } from "@/items/jeans/place";
-import { SNEAKERS } from "@/items/sneakers/place";
-import { BALL } from "@/items/basketball/place";
-import { BOARD } from "@/items/skateboard/place";
-import { LAPTOP } from "@/items/laptop/place";
-import { PHONE } from "@/items/phone/place";
-import { CONTROLLER } from "@/items/controller/place";
+import { useLayout, kindOfPiece } from "@/lib/room";
+import { pieceHome } from "@/lib/frame";
+import { useVariant } from "@/items/resolve";
+import { RoomItem } from "./RoomItem";
+import { ContactShadow } from "@/items/_shared/ContactShadow";
+import { catalogueEntry } from "@/lib/catalogue";
 
-// Items with a view of their own (extra behaviour around the look); everything else is drawn by ItemView.
-const VIEWS: Record<string, ComponentType> = { bed: BedItem, nightstand: NightstandItem, lamp: LampItem, chair: ChairItem };
+function PieceView({ id, kind }: { id: string; kind: string }) {
+  const home = pieceHome(kind);
+  const variant = useVariant(kind, id);
+  const size = useLayout((s) => s.options[id]?.size);
+  if (!variant || !home) return null;
+  const fp = variant.footprint?.(size);
+  const shadowAt: [number, number] =
+    home.position[0] === 0 && home.position[2] === 0
+      ? [0, 0]
+      : [home.position[0], home.position[2]];
+  const skipShadow = kind === "desk" || kind === "bin";
+  return (
+    <RoomItem id={id} home={home}>
+      <variant.Component id={id} />
+      {fp && !skipShadow && <ContactShadow x={shadowAt[0]} z={shadowAt[1]} size={fp} />}
+    </RoomItem>
+  );
+}
 
-// Every item in the registry, at its home — or, for clutter, where it landed this load (absent: not in the room
-// this time). Gadgets on the bed lie on the current bed's top.
 export function Items() {
-  const places = useMemo((): Record<string, { p: U3; yaw?: number } | undefined> => ({
-    hoodie: HOODIE.at === 1 ? PILE : undefined, jeans: JEANS.here ? JEANS : undefined, sneakers: SNEAKERS, basketball: BALL, skateboard: BOARD,
-    laptop: onBed(LAPTOP), phone: onBed(PHONE), controller: onBed(CONTROLLER),
-  }), []);
+  const pieces = useLayout((s) => s.pieces);
+  // Openings stay hidden until the openings PR mounts holes.
+  const ids = Object.entries(pieces).filter(([, p]) => !catalogueEntry(p.kind)?.opening);
   return (
     <>
-      {Object.values(ITEMS).map(({ id, home }) => {
-        const View = VIEWS[id];
-        if (View) return <View key={id} />;
-        if (home) return <ItemView key={id} id={id} />;
-        return places[id] && <ItemView key={id} id={id} place={places[id]} />;
-      })}
+      {ids.map(([id, p]) => (
+        <PieceView key={id} id={id} kind={p.kind} />
+      ))}
     </>
   );
+}
+
+export function pieceKind(id: string) {
+  const s = useLayout.getState();
+  return kindOfPiece(id, s.pieces, s.models);
 }

@@ -44,7 +44,7 @@ function Frame({ W }: { W: number }) {
   );
 }
 
-const PlatformBed = () => <Bedding frame={(W) => <Frame W={W} />} />;
+const PlatformBed = ({ id }: { id: string }) => <Bedding id={id} frame={(W) => <Frame W={W} />} />;
 
 // Today's bed: walnut platform frame, tufted headboard, single or double.
 export default defineVariant({

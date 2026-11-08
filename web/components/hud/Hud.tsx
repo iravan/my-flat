@@ -1,198 +1,182 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
-import { typing, useGame, type View } from "@/lib/store";
-import { useCollection } from "@/lib/collection";
+import { typing, useGame } from "@/lib/store";
 import { styleOf } from "@/lib/styles";
-import { downloadCollection, importFromFile, leaveVisit, visitFromFile } from "@/lib/share";
 import { takePhoto } from "@/lib/photo";
-import { editAlbum } from "./AlbumEditor";
 import { Panel } from "./Panel";
-import { enterEdit } from "./EditPanel";
+import { PlanSketch } from "./PlanSketch";
 import { useLayout } from "@/lib/room";
-import { NotesDialogs } from "./Notes";
+import { clampWalk, FLOORPLANS, roomAt } from "@/lib/flat-plan";
 
-const VIEWS: [View, string, string][] = [["room", "Room", "1"], ["turntable", "Turntable", "2"], ["crate", "Crate", "3"], ["shelf", "Cabinet", "4"]];
-const HELP: Record<View, string> = {
-  room: "Drag to look; WASD or the stick (bottom left) to move. Click or tap the turntable, record cabinet (your record list), crate, lamp, bed, window, framed records, notebook, whiteboard, bookshelf or the memos on the monitor.",
-  shelf: "Hover a spine to read it, click to pull it out.",
-  crate: "A/D, arrows or scroll to flip. Enter = inspect, Space = put on turntable.",
-  turntable: "Space or click the turntable to start/stop.",
-  inspect: "Drag to rotate. F flip, V slide vinyl out, G gatefold, Space play.",
-};
 const one = (v: number | readonly number[]) => (Array.isArray(v) ? v[0] : v) as number;
 
-// Neon double-glow title over the slowly turning room; any key, click or tap enters.
-function Title() {
-  return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-[#05020d]/55 text-center">
-      <h1 className="relative text-6xl font-black tracking-tight text-fuchsia-500 sm:text-8xl [text-shadow:4px_3px_0_#1ae6ff,0_0_32px_#ff40c0]">VINYL // ROOM</h1>
-      <p className="text-lg text-cyan-100">a cyber-city bedroom for your record collection</p>
-      <Button size="lg" className="mt-6 h-14 px-10 text-xl font-bold">ENTER ROOM</Button>
-      <p className="text-sm text-violet-300/70">tap or press any key · ? for controls</p>
-    </div>
-  );
-}
-
-// The main menu. On touch screens (phones) it's hidden behind a ☰ button in the top right and drops down below it.
 function LeftPanel() {
   const [open, setOpen] = useState(false);
-  const view = useGame((s) => s.view), preset = useGame((s) => s.preset), lamp = useGame((s) => s.lamp);
-  const muted = useGame((s) => s.muted), volume = useGame((s) => s.volume), visiting = useCollection((s) => s.visiting), style = useLayout((s) => s.style);
+  const preset = useGame((s) => s.preset);
+  const muted = useGame((s) => s.muted), volume = useGame((s) => s.volume), style = useLayout((s) => s.style);
+  const plan = useLayout((s) => s.plan);
+  const pos = useGame((s) => s.roomPos);
+  const here = plan ? roomAt(plan, pos[0], pos[2]) : undefined;
   const g = useGame.getState();
   return (
     <>
     <Button size="icon" variant="outline" aria-label={open ? "Close menu" : "Menu"} aria-expanded={open} onClick={() => setOpen(!open)}
       className="fixed right-2.5 top-2.5 z-40 hidden size-10 border-cyan-400/50 bg-black/70 text-lg text-cyan-200 [@media(pointer:coarse)]:flex">{open ? "✕" : "☰"}</Button>
     <Panel side="left" className={`[@media(pointer:coarse)]:left-auto [@media(pointer:coarse)]:right-2.5 [@media(pointer:coarse)]:top-14 [@media(pointer:coarse)]:z-40 [@media(pointer:coarse)]:max-h-[calc(100dvh-4rem)] ${open ? "" : "[@media(pointer:coarse)]:hidden"}`}>
-      <p><b className="capitalize text-cyan-300">{view === "shelf" ? "Cabinet" : view} view</b><br /><span className="text-zinc-400">{HELP[view]}</span></p>
-      <div className="grid gap-1">
-        {VIEWS.map(([v, label, k]) => <Button key={v} size="sm" variant={view === v ? "default" : "secondary"} onClick={() => g.setView(v)}>{label} [{k}]</Button>)}
-      </div>
+      <p><b className="text-cyan-300">My Flat</b><br /><span className="text-zinc-400">{plan?.name ?? "A flat"} — walk the rooms, place furniture from the right panel.</span></p>
+      {here && <p className="text-sm text-fuchsia-300">Now in: <b>{here.name}</b></p>}
+      {plan && (
+        <p className="text-[11px] text-zinc-500">{plan.rooms.map((r) => r.name).join(" · ")}</p>
+      )}
       <div className="grid gap-1">
         <Button size="sm" variant="outline" onClick={g.cyclePreset}>Light: {styleOf(style).presets[preset % 3].name} [L]</Button>
-        <Button size="sm" variant="outline" onClick={g.toggleLamp}>Lamp: {lamp ? "on" : "off"}</Button>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="w-28" onClick={() => useGame.setState({ muted: !muted })}>Sound: {muted ? "off" : "on"} [M]</Button>
           <Slider aria-label="Volume" min={0} max={1} step={0.01} value={[volume]} onValueChange={(v) => useGame.setState({ volume: one(v) })} />
         </div>
         <Button size="sm" variant="outline" onClick={takePhoto}>Photo [P]</Button>
-        <Button size="sm" variant="outline" onClick={() => useGame.setState({ hideUI: true })}>Showcase mode [H]</Button>
-        {!visiting && <Button size="sm" variant="outline" onClick={enterEdit}>Edit room</Button>}
+        <Button size="sm" variant="outline" onClick={() => useGame.setState({ hideUI: true })}>Hide UI [H]</Button>
         <div className="grid grid-cols-2 gap-1">
           <Button size="sm" variant="outline" onClick={() => useGame.setState({ dialog: "settings" })}>Settings</Button>
           <Button size="sm" variant="outline" onClick={() => useGame.setState({ dialog: "controls" })}>Controls [?]</Button>
         </div>
-      </div>
-      <div className="grid gap-1">
-        {visiting ? (
-          <Button size="sm" variant="outline" onClick={leaveVisit}>Leave visit (back to my flat)</Button>
-        ) : (
-          <>
-            <Button size="sm" onClick={() => editAlbum()}>+ New album</Button>
-            <div className="grid grid-cols-2 gap-1">
-              <Button size="sm" variant="outline" onClick={downloadCollection}>Export</Button>
-              <Button size="sm" variant="outline" onClick={importFromFile}>Import</Button>
-            </div>
-            <Button size="sm" variant="outline" onClick={visitFromFile}>Visit a friend&apos;s room…</Button>
-          </>
-        )}
+        <Button size="sm" variant="outline" onClick={() => useGame.setState({ choosing: true })}>Floor plans</Button>
       </div>
     </Panel>
     </>
   );
 }
 
-// Cabinet view: how many records there are.
-function CabinetPanel() {
-  const view = useGame((s) => s.view), albums = useCollection((s) => s.albums), editing = useLayout((s) => s.editing);
-  if (view !== "shelf" || editing) return null;
-  return <Panel side="right"><p>{albums.length} records in the cabinet.</p></Panel>;
-}
-
 const CONTROLS: [string, string][] = [
-  ["Everywhere", "1 / 2 / 3 / 4 Room, Turntable, Crate, Cabinet · Esc / Backspace or ◀ Back to go back · L lighting · M mute · P photo · H hide UI (Show controls brings it back) · ? this help"],
-  ["Room", "Drag to look, WASD or arrows to move, click anything that lights up."],
-  ["Cabinet", "Hover a spine to read it, click to pull the record out."],
-  ["Crate", "A/D, arrows or scroll to flip. Enter inspects, Space plays."],
-  ["Turntable", "Space or click the turntable to start/stop. Speed button: 33⅓ or 45."],
-  ["Inspecting a record", "Drag to rotate. F flip, V slide the vinyl out, G gatefold, Space play. Language tabs on the right list your other records."],
-  ["Touch screens", "Tap = click, drag = look or rotate, the stick at the bottom left = walk, ◀ Back = back, pinch = zoom a record (scroll wheel on desktop). Every screen has a button to close it, no keyboard needed."],
-  ["Sharing", "Export saves your whole room as one file. Send it to a friend: they open it with “Visit a friend's room”, read-only."],
+  ["Walk", "WASD or arrows · touch stick on phones"],
+  ["Look", "Drag empty space"],
+  ["Place", "Add from the right panel · drag a piece · R rotate · +/− scale · Del remove · ⌘Z undo"],
+  ["Other", "L lighting · M mute · P photo · H hide UI · ? this help"],
 ];
 
 function Dialogs() {
-  const dialog = useGame((s) => s.dialog), sensitivity = useGame((s) => s.sensitivity), volume = useGame((s) => s.volume), quality = useGame((s) => s.quality);
-  const close = () => useGame.setState({ dialog: "" });
+  const dialog = useGame((s) => s.dialog), quality = useGame((s) => s.quality), sensitivity = useGame((s) => s.sensitivity);
   return (
     <>
-      <Dialog open={dialog === "controls"} onOpenChange={(o) => { if (!o) close(); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader><DialogTitle>Controls</DialogTitle></DialogHeader>
-          <dl className="space-y-2 text-sm">
-            {CONTROLS.map(([h, t]) => <div key={h}><dt className="font-bold text-cyan-300">{h}</dt><dd className="text-zinc-300">{t}</dd></div>)}
-          </dl>
-          <Button onClick={close}>Close</Button>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={dialog === "settings"} onOpenChange={(o) => { if (!o) close(); }}>
+      <Dialog open={dialog === "settings"} onOpenChange={(o) => !o && useGame.setState({ dialog: "" })}>
         <DialogContent>
           <DialogHeader><DialogTitle>Settings</DialogTitle></DialogHeader>
-          <label className="grid gap-2">Mouse sensitivity: {sensitivity.toFixed(1)}×
-            <Slider min={0.2} max={3} step={0.1} value={[sensitivity]} onValueChange={(v) => useGame.setState({ sensitivity: one(v) })} />
+          <label className="grid gap-1 text-sm">Quality
+            <select className="rounded border bg-black/40 p-2" value={quality} onChange={(e) => useGame.getState().setQuality(+e.target.value as 0 | 1 | 2)}>
+              <option value={0}>Low</option><option value={1}>Medium</option><option value={2}>High</option>
+            </select>
           </label>
-          <label className="grid gap-2">Volume: {Math.round(volume * 100)}%
-            <Slider min={0} max={1} step={0.01} value={[volume]} onValueChange={(v) => useGame.setState({ volume: one(v) })} />
+          <label className="grid gap-1 text-sm">Look sensitivity
+            <Slider min={0.25} max={2} step={0.05} value={[sensitivity]} onValueChange={(v) => useGame.setState({ sensitivity: one(v) })} />
           </label>
-          <div className="grid gap-2">Graphics
-            <div className="grid grid-cols-3 gap-1">
-              {(["Low", "Medium", "High"] as const).map((q, i) => (
-                <Button key={q} size="sm" variant={quality === i ? "default" : "outline"} onClick={() => useGame.getState().setQuality(i as 0 | 1 | 2)}>{q}</Button>
-              ))}
-            </div>
-            <p className="text-xs text-zinc-400">Low: no glow, no lamp shadows. High: glow, soft shadows, smoothing.</p>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={dialog === "controls"} onOpenChange={(o) => !o && useGame.setState({ dialog: "" })}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Controls</DialogTitle></DialogHeader>
+          <div className="space-y-3 text-sm">
+            {CONTROLS.map(([t, b]) => <div key={t}><p className="font-bold text-cyan-300">{t}</p><p className="text-zinc-300">{b}</p></div>)}
           </div>
-          <Button onClick={close}>Close</Button>
         </DialogContent>
       </Dialog>
     </>
   );
 }
 
-// Keys that work everywhere outside dialogs: title dismiss, L, H, P, ?. Also keeps the page from pinch-zooming on iOS.
 function useHudKeys() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (typing(e)) return;
       const s = useGame.getState();
-      if (s.title) { enter(); return; }
-      if (s.draft || s.dialog) return;
+      if (s.choosing || s.dialog) return;
       if (e.key === "l") s.cyclePreset();
       if (e.key === "h") useGame.setState({ hideUI: !s.hideUI });
       if (e.key === "p") takePhoto();
       if (e.key === "?" || e.key === "F1") { e.preventDefault(); useGame.setState({ dialog: "controls" }); }
     };
-    // Leave the title after this event has been handled everywhere, so the key or click that enters
-    // doesn't also switch a view or toggle the lamp.
-    const enter = () => setTimeout(() => useGame.setState({ title: false }), 0);
-    const tap = () => { if (useGame.getState().title) enter(); };
-    // iOS Safari ignores the viewport's no-zoom for pinches; its gesture events are the only way to stop them.
-    const noPinch = (e: Event) => e.preventDefault();
     window.addEventListener("keydown", key);
-    window.addEventListener("pointerup", tap);
-    document.addEventListener("gesturestart", noPinch);
-    return () => { window.removeEventListener("keydown", key); window.removeEventListener("pointerup", tap); document.removeEventListener("gesturestart", noPinch); };
+    return () => window.removeEventListener("keydown", key);
   }, []);
 }
 
-// Portrait phones are too narrow for the side panels: ask for landscape instead of shrinking everything.
 function TurnSideways() {
   return (
     <div className="fixed inset-0 z-50 hidden flex-col items-center justify-center gap-3 bg-[#05020d]/95 p-6 text-center [@media(orientation:portrait)_and_(pointer:coarse)]:flex">
-      <p className="text-3xl font-bold text-fuchsia-500 [text-shadow:0_0_18px_#ff40c0]">Turn your phone sideways</p>
+      <p className="text-3xl font-bold text-cyan-300">Turn your phone sideways</p>
       <p className="text-zinc-300">The room is best in landscape.</p>
+    </div>
+  );
+}
+
+function continueFlat() {
+  const plan = useLayout.getState().plan;
+  const pos = useGame.getState().roomPos;
+  if (!plan) { useGame.setState({ choosing: false }); return; }
+  const [x, z] = clampWalk(plan, pos[0], pos[2]);
+  const y = Math.min(plan.h - 0.3, Math.max(0.4, pos[1] || 1.5));
+  useGame.setState({ choosing: false, roomPos: [x, y, z] });
+}
+
+export function PlanPicker() {
+  const choosing = useGame((s) => s.choosing);
+  const name = useLayout((s) => s.name);
+  const pieces = useLayout((s) => s.pieces);
+  if (!choosing) return null;
+  const furniture = Math.max(0, Object.keys(pieces).length - 1);
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#05020d]/85 p-4 backdrop-blur-sm">
+      <div className="grid max-h-[calc(100dvh-2rem)] w-full max-w-5xl gap-3 overflow-y-auto">
+        <div>
+          <h1 className="text-2xl font-bold text-cyan-300">Choose a floor plan</h1>
+          <p className="text-sm text-zinc-400">Start an empty shell. Continue keeps the furniture already saved on this device.</p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {FLOORPLANS.map((p) => {
+            const plan = p.build();
+            return (
+              <button key={p.id} type="button" onClick={() => useLayout.getState().applyPlanAction(p.id)}
+                className="rounded-lg border border-cyan-400/40 bg-black/70 p-3 text-left hover:border-cyan-300">
+                <PlanSketch plan={plan} />
+                <p className="mt-2 font-bold text-cyan-200">{p.title}</p>
+                <p className="text-xs text-fuchsia-300">{p.area}</p>
+                <p className="mt-1 text-xs text-zinc-400">{p.blurb}</p>
+              </button>
+            );
+          })}
+        </div>
+        <Button variant="outline" onClick={continueFlat}>
+          Continue · {name}{furniture > 0 ? ` · ${furniture} pieces` : ""}
+        </Button>
+      </div>
     </div>
   );
 }
 
 export function Hud() {
   useHudKeys();
-  const title = useGame((s) => s.title), hideUI = useGame((s) => s.hideUI), visiting = useCollection((s) => s.visiting);
-  if (title) return <><Title /><TurnSideways /></>;
+  useEffect(() => {
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("my-flat-did-migrate")) {
+      sessionStorage.removeItem("my-flat-did-migrate");
+      toast.message("Started a new flat. The previous layout was the bedroom and was not kept.");
+    }
+    const g = useGame.getState();
+    if (g.view !== "room") useGame.setState({ view: "room", title: false });
+    else if (g.title) useGame.setState({ title: false });
+  }, []);
+  const hideUI = useGame((s) => s.hideUI), choosing = useGame((s) => s.choosing);
   return (
     <>
       <TurnSideways />
+      <PlanPicker />
       <Dialogs />
-      <NotesDialogs />
-      {!hideUI && (
-        <>
-          <LeftPanel />
-          <CabinetPanel />
-          {visiting && <div className="fixed left-1/2 top-2.5 -translate-x-1/2 rounded border border-fuchsia-400/60 bg-black/70 px-4 py-1 text-xs font-bold tracking-widest text-fuchsia-300">VISITING A FRIEND&apos;S ROOM (read-only)</div>}
-        </>
+      {!hideUI && !choosing && <LeftPanel />}
+      {hideUI && !choosing && (
+        <Button size="sm" className="fixed bottom-3 left-1/2 z-40 -translate-x-1/2" onClick={() => useGame.setState({ hideUI: false })}>Show controls</Button>
       )}
     </>
   );

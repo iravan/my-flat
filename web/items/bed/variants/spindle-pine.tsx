@@ -45,7 +45,7 @@ function Frame({ W }: { W: number }) {
   );
 }
 
-const SpindleBed = () => <Bedding frame={(W) => <Frame W={W} />} />;
+const SpindleBed = ({ id }: { id: string }) => <Bedding id={id} frame={(W) => <Frame W={W} />} />;
 
 export default defineVariant({
   item: "bed", id: "spindle-pine", name: "Pine spindle bed",

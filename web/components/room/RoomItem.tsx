@@ -3,7 +3,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { hiddenOf, liveHomes, ON_WALL, poseOf, restPosition, useLayout, type Home } from "@/lib/room";
+import { catalogueEntry } from "@/lib/catalogue";
+import { hiddenOf, kindOfPiece, liveHomes, poseOf, restPosition, useLayout, type Home, type WallId } from "@/lib/room";
 import { ITEMS } from "@/items/registry";
 import { applyFinish, finishType } from "@/lib/options";
 import { finishDefaults } from "@/lib/config";
@@ -26,9 +27,19 @@ function surfaceUnder(scene: THREE.Scene, id: string): THREE.Vector3 | null {
 
 // Edit mode: press on an item to select it, drag to move it — along the floor, or along its wall for wall
 // fixtures — snapped to 5 cm (Shift: 1 cm). One undo step per drag.
+function wallAxis(wall?: WallId): "x" | "z" | undefined {
+  if (!wall) return undefined;
+  return wall === "e" || wall === "w" ? "x" : "z";
+}
+
 function startDrag(id: string, home: Home, e: ThreeEvent<PointerEvent>, camera: THREE.Camera, el: HTMLElement, scene: THREE.Scene) {
   e.stopPropagation();
-  const start = poseOf(id, home), axis = ON_WALL[id];
+  const L0 = useLayout.getState();
+  const piece = L0.pieces[id];
+  const kind = piece ? piece.kind : kindOfPiece(id, L0.pieces, L0.models);
+  const sits = !!(kind && catalogueEntry(kind)?.sits);
+  const axis = piece ? wallAxis(piece.wall) : undefined;
+  const start = poseOf(id, home);
   useLayout.setState({ selected: id, dragging: true });
   const plane = axis
     ? new THREE.Plane(axis === "x" ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1), -start.position[axis === "x" ? 0 : 2])
@@ -41,7 +52,7 @@ function startDrag(id: string, home: Home, e: ThreeEvent<PointerEvent>, camera: 
     ray.setFromCamera(ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), camera);
     const step = ev.shiftKey ? 0.01 : 0.05, snap = (v: number) => +(Math.round(v / step) * step).toFixed(3);
     let position: [number, number, number];
-    if (id.startsWith("model-")) {
+    if (sits) {
       const s = surfaceUnder(scene, id);
       if (!s) return;
       position = [snap(s.x), +s.y.toFixed(3), snap(s.z)];
@@ -84,7 +95,8 @@ export function RoomItem({ id, home, children, shellModel }: { id: string; home:
     const L = useLayout.getState(), shell = !shellModel && !!L.shells[id];
     // On a replaced parent: rise (or sink) onto the replacement's top.
     if (on && !L.items[id] && ref.current?.children[0]) ref.current.children[0].position.y = -home.position[1] + (L.shells[on] ? lifts.get(on) ?? 0 : 0);
-    const style = finishDefaults(L.style, id), own = L.options[id];
+    const kind = kindOfPiece(id, L.pieces, L.models) ?? id;
+    const style = finishDefaults(L.style, kind), own = L.options[id];
     const styled = Object.keys(style).length > 0, opts = own || styled ? { ...style, ...own } : undefined;
     if (!opts && !touched.current && !shell && !shelled.current) return;
     touched.current = !!opts;

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:pages": "PAGES_BASE_PATH=/my-flat next build",
     "start": "next start",
     "lint": "eslint",
     "check": "node --experimental-websocket scripts/check.mjs",

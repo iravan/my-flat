@@ -8,7 +8,6 @@ import { useLayout, useStyle } from "@/lib/room";
 import { BED_HOME } from "@/lib/layout";
 import { srgb } from "@/lib/lighting";
 import { perlin, rng } from "@/lib/paint";
-import { Clickable } from "@/components/room/Clickable";
 import { PbrMaterial, projectUVs, rounded, type TextureSet } from "@/components/room/Surface";
 
 // What every bed look shares: a mattress with rounded edges in a fitted sheet, two plump pillows, a duvet that is
@@ -180,23 +179,17 @@ function Soft({ geometry, set, color, position, rotation, double, finish }: {
 export const bedWidth = (size?: string) => WIDTH[size ?? "single"] ?? W1;
 
 // The bed at its place: the look's frame (given the width) and the bedding on it.
-export function Bedding({ frame }: { frame: (W: number) => ReactNode }) {
+export function Bedding({ frame, id }: { frame: (W: number) => ReactNode; id: string }) {
   const covers = useStyle().covers, cover = covers[useGame((s) => s.blanket) % covers.length];
-  const W = bedWidth(useLayout((s) => s.options.bed?.size)), g = geometries(W);
-  // Clicking the bed cycles the duvet colours; a duvet colour picked in edit mode gives way to it.
-  const nextBlanket = () => {
-    useGame.getState().nextBlanket();
-    const o = useLayout.getState().options.bed;
-    if (o?.["fabric:Duvet"]) { const rest = { ...o }; delete rest["fabric:Duvet"]; useLayout.setState((s) => ({ options: { ...s.options, bed: rest } })); }
-  };
+  const W = bedWidth(useLayout((s) => s.options[id]?.size)), g = geometries(W);
   return (
-    <Clickable onTap={nextBlanket} position={[BED_POS[0] + (W - W1) / 2, BED_POS[1], BED_POS[2]]}>
+    <group position={[BED_POS[0] + (W - W1) / 2, BED_POS[1], BED_POS[2]]}>
       {frame(W)}
       <Soft geometry={g.mattress} set="cotton_jersey" color={SHEET} position={[0, (MT + MB) / 2, HEAD + L / 2]} finish="fabric:Sheets" />
       {PILLOWS.map((p) => <Soft key={p.key} geometry={g[p.key]} set="cotton_jersey" color={CASE} position={p.position} rotation={p.rotation} finish="fabric:Sheets" />)}
       <Soft geometry={g.duvet} set="cotton_jersey" color={cover} double finish="fabric:Duvet" />
       <Soft geometry={g.throwG} set="knitted_fleece" color={THROW} double finish="fabric:Throw" />
-    </Clickable>
+    </group>
   );
 }
 

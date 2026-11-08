@@ -6,8 +6,7 @@ import * as THREE from "three";
 import { useGame, type Vec3 } from "@/lib/store";
 import { CYAN, srgb } from "@/lib/lighting";
 import { Slab } from "./Surface";
-import { RoomItem } from "./RoomItem";
-import { HOMES, useStyle } from "@/lib/room";
+import { useStyle } from "@/lib/room";
 
 const METAL = srgb(0.55, 0.55, 0.7);
 const LIGHT_SCALE = { hemi: 14, sun: 2, fill: 4, city: 8, lamp: 4 }; // tuned by eye against the Unity screenshots
@@ -62,8 +61,7 @@ export function Lighting() {
     p.ambient.clone().multiplyScalar(1.15).add(style.neon.glow ? style.neon.a.clone().add(style.neon.b).multiplyScalar(0.045) : new THREE.Color()),
     p.ambient.clone().multiplyScalar(0.4),
   ], [p, style]);
-  const [sunTarget, cityTarget] = useMemo(() => [new THREE.Object3D(), new THREE.Object3D()], []);
-  const city = useMemo(() => style.windowLight.clone().multiply(p.window), [p, style]);
+  const [sunTarget] = useMemo(() => [new THREE.Object3D()], []);
 
   return (
     <>
@@ -72,12 +70,6 @@ export function Lighting() {
       <primitive object={sunTarget} position={[-0.542, -0.643, -0.542]} />
       <directionalLight position={[0, 0, 0]} target={sunTarget} color={style.sunColor} intensity={p.sun * LIGHT_SCALE.sun * style.exposure} />
       <pointLight position={[1.2, 1.7, -0.6]} color={style.fill} intensity={LIGHT_SCALE.fill * style.exposure} distance={3.5} />
-      {/* City glow through the window: wide, soft, aimed down into the room. */}
-      <RoomItem id="window" home={HOMES.window}>
-        <primitive object={cityTarget} position={[-0.3, 1.17, -1.1]} />
-        <spotLight position={[-0.3, 1.7, -1.95]} target={cityTarget} angle={(57.5 * Math.PI) / 180} penumbra={0.65} distance={5.5} color={city} intensity={LIGHT_SCALE.city * style.exposure} />
-      </RoomItem>
-
       <Reflections />
     </>
   );

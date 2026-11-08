@@ -1,10 +1,41 @@
+# OS and editors
 .DS_Store
 .claude/
 .vscode/
 .idea/
-node_modules/
+
+# secrets
 .env*
+!.env.example
 *.pem
 
-# graphify knowledge graph (generated)
+# dependencies, at the repo root and under web/
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js. Unanchored so web/.next and a nested web/web/.next are both ignored.
+.next/
+out/
+build/
+.vercel
+next-env.d.ts
+
+# TypeScript and tests
+*.tsbuildinfo
+coverage/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+bun-debug.log*
+
+# generated knowledge graph
 graphify-out/

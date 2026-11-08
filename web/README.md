@@ -1,6 +1,6 @@
 # My Flat (web)
 
-Next.js 16 + React Three Fiber + Zustand + Tailwind + shadcn/ui. Forked from My Room; see `../README.md`. The Unity bedroom it started from is git tag `unity-final` (`../MIGRATION.md`).
+Next.js 16 + React Three Fiber + Zustand + Tailwind + shadcn/ui. Forked from My Room; see `../README.md`. The flat v1 plan is `../design.md`. The Unity bedroom of the parent product is git tag `unity-final`.
 
 ```sh
 bun install

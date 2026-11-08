@@ -112,15 +112,14 @@ const mouse = (type, x, y) => send("Input.dispatchMouseEvent", { type, x, y, but
 await send("Runtime.enable");
 await send("Page.navigate", { url });
 await sleep(5000);
-await mouse("mousePressed", 640, 360); await mouse("mouseReleased", 640, 360); // dismisses a title screen, unlocks audio
+await mouse("mousePressed", 640, 360); await mouse("mouseReleased", 640, 360);
 await sleep(1500);
 
 const report = { url, views: [], drag: {}, fps: 0, errors: [] };
-for (const [k, name] of [["2", "turntable"], ["3", "crate"], ["4", "shelf"], ["1", "room"]]) {
-  await key(k); await sleep(2000);
+{
   const png = await grab();
-  fs.writeFileSync(path.join(out, `view-${name}.png`), png);
-  report.views.push({ name, tile: +tileScore(decodePng(png)).toFixed(2) });
+  fs.writeFileSync(path.join(out, `view-room.png`), png);
+  report.views.push({ name: "room", tile: +tileScore(decodePng(png)).toFixed(2) });
 }
 
 // Turn the camera in small steps, one frame each way, scanning every frame.

@@ -38,6 +38,7 @@ type State = {
   // Inspector: drag rotation (degrees, Unity's inspectRotation), zoom distance, vinyl out, gatefold open.
   draft: Album | null; // album open in the editor
   title: boolean; // title screen showing (every load)
+  choosing: boolean; // floor-plan picker; not persisted, so it shows on every load
   hideUI: boolean; // showcase mode
   dialog: "" | "settings" | "controls" | "notes" | "board" | "books" | "memos" | "records";
   playing: boolean; // needle down / platter spinning
@@ -61,7 +62,7 @@ export const useGame = create<State>()(
       inspectReturn: "room",
       yaw: -42, // desk and PC just in frame on the left
       pitch: 10,
-      roomPos: [1.3, 1.55, 1.5],
+      roomPos: [0, 1.5, 1.1], // living centre of shimizu() (centred plan)
       sensitivity: 1,
       volume: 0.8,
       muted: false,
@@ -78,7 +79,8 @@ export const useGame = create<State>()(
       hint: "",
       flip: (d, count) => set((s) => ({ selected: Math.min(Math.max(0, count - 1), Math.max(0, s.selected + d)) })),
       draft: null,
-      title: true,
+      title: false,
+      choosing: true,
       hideUI: false,
       dialog: "",
       playing: false,

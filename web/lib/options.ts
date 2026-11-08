@@ -58,16 +58,19 @@ export const finishLabel = (slot: string) => slot.split(":")[1] ?? slot[0].toUpp
 
 export type Options = Record<string, Record<string, string>>;
 // Untrusted options → only known slots and choices.
-export function normalizeOptions(raw: unknown): Options {
+// kindOfId maps a save id (piece id or bedroom singleton) to a catalogue kind; default is identity for the bedroom path.
+export function normalizeOptions(raw: unknown, kindOfId: (id: string) => string | undefined = (id) => id): Options {
   const out: Options = {};
   if (!raw || typeof raw !== "object") return out;
   for (const [id, o] of Object.entries(raw as Record<string, unknown>).slice(0, 500)) {
     if (!/^[\w-]{1,64}$/.test(id) || !o || typeof o !== "object") continue;
+    const kind = kindOfId(id);
+    if (!kind) continue;
     const clean: Record<string, string> = {};
     for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
       if (typeof v !== "string") continue;
-      if (k === "look") { if (ITEMS[id]?.variants.includes(v)) clean[k] = v; continue; }
-      const variant = VARIANTS[id]?.[k];
+      if (k === "look") { if (ITEMS[kind]?.variants.includes(v)) clean[k] = v; continue; }
+      const variant = VARIANTS[kind]?.[k];
       if (variant ? v in variant.choices : /^[a-z]+(:[A-Za-z ]{1,24})?$/.test(k) && v in (FINISHES[finishType(k)] ?? {})) clean[k] = v;
     }
     if (Object.keys(clean).length) out[id] = clean;

@@ -11,7 +11,7 @@ import { countryLayer, daySky, GROUND, groundTexture, seaLayer } from "./Landsca
 // layers at street, district and horizon distance, hazier the farther they are. The room is on a high floor:
 // eye level (y 1.5) is ~30 m above the street. Opening in the back wall: x −1…0.4, y 1.05…2.05 (Room.tsx).
 export const OPENING = { x0: -1, x1: 0.4, y0: 1.05, y1: 2.05 };
-const EYE = 1.5, WALL = -2.1; // outer face of the back wall
+export const EYE = 1.5, WALL = -2.1; // outer face of the back wall
 const SKY_R = 900;
 
 type Layer = {
@@ -129,7 +129,8 @@ function sky() {
 }
 
 const viewCache = new Map<string, { skyMap: THREE.Texture; layers: { L: Layer; map: THREE.Texture }[]; ground?: THREE.Texture }>();
-function views(kind: "city" | "country" | "sea", pines: boolean) {
+/** The painted view (sky + layers + ground) for an outside kind; shared by every window in the flat. */
+export function views(kind: "city" | "country" | "sea", pines: boolean) {
   const key = kind + pines;
   if (!viewCache.has(key))
     viewCache.set(key, kind === "city"
